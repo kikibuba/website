@@ -1,20 +1,443 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="index.css">
-    <link rel="scripts" href="index.js">
+    <title>Hoard cookies</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
+    <style>
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .cookie-click {
+            transition: transform 0.1s ease;
+        }
+        .cookie-click:active {
+            transform: scale(0.95);
+        }
+        .golden-cookie {
+            animation: float 3s ease-in-out infinite;
+        }
+        .upgrade-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .notification {
+            animation: slideIn 0.5s forwards, fadeOut 0.5s 2.5s forwards;
+        }
+        @keyframes slideIn {
+            from { right: -300px; }
+            to { right: 20px; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
 </head>
-<body>
-    <h1>The about page.</h1>
-    <p>The sky is blue!</p>
-    <div class="photos">
-        <img src="images-small/buterfly-small.jpg" alt="buterflies">
-        <img src="images-small/woman-small.jpg" alt="woman">
-        <img src="images-small/beecat-small.jpg" alt="beecat">
+<body class="bg-gradient-to-br from-purple-50 to-indigo-100 min-h-screen font-mono">
+    <div id="app" class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-purple-900">CookieMancer 🍪</h1>
+            <div class="flex space-x-4">
+                <button class="p-2 rounded-full bg-purple-200 hover:bg-purple-300 transition">
+                    <i data-feather="settings"></i>
+                </button>
+                <button class="p-2 rounded-full bg-purple-200 hover:bg-purple-300 transition">
+                    <i data-feather="bar-chart-2"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Game Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column - Stats -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold text-purple-800 mb-4">Cookie Stats</h2>
+                <div class="space-y-4">
+                    <div class="text-4xl font-bold text-purple-600" id="cookie-count">0</div>
+                    <div class="text-lg text-purple-500" id="cps">0 cookies per second</div>
+                    <div class="h-2 bg-purple-100 rounded-full">
+                        <div id="click-power-bar" class="h-2 bg-purple-500 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div class="text-sm text-purple-400">Click Power: <span id="click-power">1</span></div>
+                </div>
+
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold text-purple-700 mb-2">Achievements</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-purple-50 p-2 rounded flex items-center">
+                            <div class="w-6 h-6 bg-yellow-300 rounded-full mr-2"></div>
+                            <span class="text-sm">First Click</span>
+                        </div>
+                        <!-- More achievements... -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Column - Cookie -->
+            <div class="flex flex-col items-center">
+                <div class="relative mb-4">
+                    <button id="cookie" class="cookie-click focus:outline-none">
+                        <img src="http://static.photos/food/320x320/42" alt="Cookie" 
+                             class="w-64 h-64 rounded-full shadow-xl hover:shadow-2xl transition">
+                    </button>
+                    <div id="click-effect" class="absolute inset-0 pointer-events-none"></div>
+                </div>
+                <div class="text-xl text-purple-700">Click the cookie!</div>
+                
+                <!-- Golden Cookie Spawn Area -->
+                <div id="golden-cookie-container" class="relative w-full h-32 mt-4 hidden">
+                    <div id="golden-cookie" class="absolute golden-cookie cursor-pointer">
+                        <img src="http://static.photos/yellow/80x80/7" alt="Golden Cookie" 
+                             class="w-16 h-16 rounded-full shadow-lg">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Shop -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold text-purple-800 mb-4">Cookie Shop</h2>
+                
+                <div class="mb-6">
+                    <div class="flex justify-between mb-2">
+                        <h3 class="font-medium text-purple-700">Production</h3>
+                        <span class="text-sm text-purple-500">Income: <span id="total-cps">0</span>/s</span>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <!-- Cursor -->
+                        <div class="upgrade-card p-3 bg-purple-50 rounded-lg transition cursor-pointer" 
+                             onclick="buyUpgrade('cursor')">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h4 class="font-medium">Cursor</h4>
+                                    <p class="text-sm text-purple-500">Auto-clicks every 10s</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold" id="cursor-price">15</div>
+                                    <div class="text-xs" id="cursor-count">0 owned</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Grandma -->
+                        <div class="upgrade-card p-3 bg-purple-50 rounded-lg transition cursor-pointer" 
+                             onclick="buyUpgrade('grandma')">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h4 class="font-medium">Grandma</h4>
+                                    <p class="text-sm text-purple-500">Bakes cookies with love</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold" id="grandma-price">100</div>
+                                    <div class="text-xs" id="grandma-count">0 owned</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Farm -->
+                        <div class="upgrade-card p-3 bg-purple-50 rounded-lg transition cursor-pointer" 
+                             onclick="buyUpgrade('farm')">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h4 class="font-medium">Farm</h4>
+                                    <p class="text-sm text-purple-500">Grows cookie plants</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold" id="farm-price">1,100</div>
+                                    <div class="text-xs" id="farm-count">0 owned</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="font-medium text-purple-700 mb-2">Upgrades</h3>
+                    <div class="space-y-3">
+                        <!-- Click Power -->
+                        <div class="upgrade-card p-3 bg-purple-50 rounded-lg transition cursor-pointer" 
+                             onclick="buyUpgrade('clickPower')">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h4 class="font-medium">Reinforced Clicking</h4>
+                                    <p class="text-sm text-purple-500">+1 cookie per click</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold" id="click-power-price">50</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Container -->
+        <div id="notification-container" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
     </div>
-    <p></p>
-    <a href="index.html">Return</a>
+    <script>
+        // Register Service Worker for offline capability
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(registrationError => {
+                    console.log('SW registration failed: ', registrationError);
+                });
+            });
+        }
+// Game State
+        let game = loadGame() || {
+            cookies: 0,
+            cps: 0,
+            clickPower: 1,
+            upgrades: {
+                cursor: { price: 15, owned: 0, cps: 0.1 },
+                grandma: { price: 100, owned: 0, cps: 1 },
+                farm: { price: 1100, owned: 0, cps: 8 },
+                clickPower: { price: 50, increase: 1 }
+            },
+            achievements: {
+                firstClick: false
+            },
+            lastUpdate: Date.now()
+        };
+// DOM Elements
+        const cookie = document.getElementById('cookie');
+        const cookieCount = document.getElementById('cookie-count');
+        const cpsDisplay = document.getElementById('cps');
+        const totalCps = document.getElementById('total-cps');
+        const clickPower = document.getElementById('click-power');
+        const clickPowerBar = document.getElementById('click-power-bar');
+        const goldenCookieContainer = document.getElementById('golden-cookie-container');
+        const goldenCookie = document.getElementById('golden-cookie');
+        const notificationContainer = document.getElementById('notification-container');
+        // Initialize
+        feather.replace();
+        
+        // Calculate offline progress
+        if (game.lastUpdate) {
+            const now = Date.now();
+            const timeDiff = (now - game.lastUpdate) / 1000; // in seconds
+            if (timeDiff > 0) {
+                // Calculate offline cookies (max 24 hours)
+                const maxOfflineTime = 24 * 60 * 60; // 24 hours in seconds
+                const effectiveTime = Math.min(timeDiff, maxOfflineTime);
+                game.cookies += game.cps * effectiveTime;
+                
+                if (effectiveTime > 60) {
+                    showNotification(`Welcome back! You earned ${formatNumber(game.cps * effectiveTime)} cookies while offline.`, 'bg-green-100 text-green-800');
+                }
+            }
+        }
+        
+        updateUI();
+// Event Listeners
+        cookie.addEventListener('click', handleCookieClick);
+        goldenCookie.addEventListener('click', handleGoldenCookieClick);
+
+        // Game Loop
+        setInterval(gameLoop, 1000);
+        setInterval(spawnGoldenCookie, 30000);
+
+        // Functions
+        function gameLoop() {
+            // Passive income
+            let passiveIncome = 0;
+            Object.keys(game.upgrades).forEach(upgrade => {
+                if (game.upgrades[upgrade].cps) {
+                    passiveIncome += game.upgrades[upgrade].owned * game.upgrades[upgrade].cps;
+                }
+            });
+            
+            game.cookies += passiveIncome;
+            game.cps = passiveIncome;
+            game.lastUpdate = Date.now();
+            saveGame();
+            updateUI();
+        }
+        function saveGame() {
+            localStorage.setItem('cookieMancer', JSON.stringify(game));
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('cookieMancer');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Ensure all properties exist for backwards compatibility
+                return {
+                    cookies: parsed.cookies || 0,
+                    cps: parsed.cps || 0,
+                    clickPower: parsed.clickPower || 1,
+                    upgrades: parsed.upgrades || {
+                        cursor: { price: 15, owned: 0, cps: 0.1 },
+                        grandma: { price: 100, owned: 0, cps: 1 },
+                        farm: { price: 1100, owned: 0, cps: 8 },
+                        clickPower: { price: 50, increase: 1 }
+                    },
+                    achievements: parsed.achievements || {
+                        firstClick: false
+                    },
+                    lastUpdate: parsed.lastUpdate || Date.now()
+                };
+            }
+            return null;
+        }
+
+        function handleCookieClick() {
+            // Add cookies
+            game.cookies += game.clickPower;
+            game.lastUpdate = Date.now();
+            saveGame();
+// Achievement check
+            if (!game.achievements.firstClick) {
+                game.achievements.firstClick = true;
+                showNotification('Achievement Unlocked: First Click!', 'bg-yellow-100 text-yellow-800');
+            }
+            
+            // Animation
+            anime({
+                targets: '#click-effect',
+                scale: [1, 1.5],
+                opacity: [0.8, 0],
+                duration: 500,
+                easing: 'easeOutExpo'
+            });
+            
+            // Create floating number
+            const clickText = document.createElement('div');
+            clickText.textContent = `+${game.clickPower}`;
+            clickText.className = 'absolute text-purple-600 font-bold text-lg pointer-events-none';
+            clickText.style.left = `${Math.random() * 100}%`;
+            clickText.style.top = `${Math.random() * 100}%`;
+            document.getElementById('click-effect').appendChild(clickText);
+            
+            anime({
+                targets: clickText,
+                translateY: -50,
+                opacity: [1, 0],
+                duration: 1000,
+                easing: 'easeOutExpo',
+                complete: () => clickText.remove()
+            });
+            
+            updateUI();
+        }
+
+        function handleGoldenCookieClick() {
+            // Bonus cookies
+            const bonus = Math.floor(game.cps * 10);
+            game.cookies += bonus;
+            
+            // Animation
+            anime({
+                targets: goldenCookie,
+                scale: [1, 1.5],
+                opacity: [1, 0],
+                duration: 500,
+                easing: 'easeOutExpo',
+                complete: () => {
+                    goldenCookieContainer.classList.add('hidden');
+                }
+            });
+            
+            showNotification(`Golden Cookie! +${bonus} cookies`, 'bg-yellow-100 text-yellow-800');
+            updateUI();
+        }
+
+        function spawnGoldenCookie() {
+            if (Math.random() < 0.3) { // 30% chance to spawn
+                goldenCookieContainer.classList.remove('hidden');
+                goldenCookie.style.left = `${10 + Math.random() * 80}%`;
+                
+                // Despawn after 10 seconds if not clicked
+                setTimeout(() => {
+                    if (!goldenCookieContainer.classList.contains('hidden')) {
+                        goldenCookieContainer.classList.add('hidden');
+                    }
+                }, 10000);
+            }
+        }
+        function buyUpgrade(type) {
+            game.lastUpdate = Date.now();
+            saveGame();
+const upgrade = game.upgrades[type];
+            
+            if (game.cookies >= upgrade.price) {
+                game.cookies -= upgrade.price;
+                
+                if (type === 'clickPower') {
+                    game.clickPower += upgrade.increase;
+                    upgrade.price = Math.floor(upgrade.price * 1.5);
+                } else {
+                    upgrade.owned++;
+                    upgrade.price = Math.floor(upgrade.price * 1.15);
+                }
+                
+                showNotification(`Purchased: ${type}`, 'bg-purple-100 text-purple-800');
+                updateUI();
+            } else {
+                showNotification('Not enough cookies!', 'bg-red-100 text-red-800');
+            }
+        }
+
+        function updateUI() {
+            // Update cookie count
+            cookieCount.textContent = formatNumber(game.cookies);
+            
+            // Update CPS
+            cpsDisplay.textContent = `${formatNumber(game.cps)} cookies per second`;
+            totalCps.textContent = formatNumber(game.cps);
+            
+            // Update click power
+            clickPower.textContent = game.clickPower;
+            clickPowerBar.style.width = `${Math.min(100, game.clickPower)}%`;
+            
+            // Update shop prices and counts
+            document.getElementById('cursor-price').textContent = formatNumber(game.upgrades.cursor.price);
+            document.getElementById('cursor-count').textContent = `${game.upgrades.cursor.owned} owned`;
+            
+            document.getElementById('grandma-price').textContent = formatNumber(game.upgrades.grandma.price);
+            document.getElementById('grandma-count').textContent = `${game.upgrades.grandma.owned} owned`;
+            
+            document.getElementById('farm-price').textContent = formatNumber(game.upgrades.farm.price);
+            document.getElementById('farm-count').textContent = `${game.upgrades.farm.owned} owned`;
+            
+            document.getElementById('click-power-price').textContent = formatNumber(game.upgrades.clickPower.price);
+        }
+
+        function showNotification(message, classes) {
+            const notification = document.createElement('div');
+            notification.className = `notification p-3 rounded-lg shadow-md ${classes}`;
+            notification.textContent = message;
+            notificationContainer.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            }
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return Math.floor(num);
+        }
+    </script>
+    <script>feather.replace();</script>
 </body>
 </html>
